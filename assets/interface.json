@@ -31,13 +31,14 @@
             ]
         }
     ],
-    // 可选的 agent 示例
-    // "agent": {
-    //     "child_exec": "python",
-    //     "child_args": [
-    //         "./agent/main.py"
-    //     ]
-    // },
+    // agent：运行自定义动作/识别（卡死守护依赖此运行）
+    // 注意：启用后运行任务前需确保本机 Python 环境已安装 maa 依赖
+    "agent": {
+        "child_exec": "python",
+        "child_args": [
+            "./agent/main.py"
+        ]
+    },
     "task": [
         {
             "name": "启动游戏",
@@ -71,27 +72,105 @@
         //     "entry": "MyTask4"
         // }
     ],
-    // "option": {
-    //     "任务选项1": {
-    //         "type": "select",
-    //         "cases": [
-    //             {
-    //                 "name": "文本1",
-    //                 "pipeline_override": {
-    //                     "OcrTask": {
-    //                         "text": "文本1"
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 "name": "文本2",
-    //                 "pipeline_override": {
-    //                     "OcrTask": {
-    //                         "text": "文本2"
-    //                     }
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // }
+    "global_option": [
+        "卡死守护开关",
+        "卡死邮件配置",
+        "卡死关机配置"
+    ],
+    "option": {
+        // 可选功能总开关：游戏出现不可识别项并卡死时，是否启用卡死守护
+        "卡死守护开关": {
+            "type": "switch",
+            "label": "卡死守护（可选功能总开关）",
+            "description": "游戏出现不可识别项并卡死在该页面时，是否执行保护动作（发邮件 / 自动关机）。默认关闭。",
+            "default_case": "No",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "卡死检测": {
+                            "custom_action_param": {
+                                "enable": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "pipeline_override": {
+                        "卡死检测": {
+                            "custom_action_param": {
+                                "enable": false
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        // 可选功能一：卡死时发送 QQ 邮件通知（发件邮箱 / 授权码 / 收件人）
+        "卡死邮件配置": {
+            "type": "input",
+            "label": "卡死邮件通知（可选）",
+            "description": "游戏卡死时向您的邮箱发送通知。需提供 QQ 发件邮箱、SMTP 授权码（即 MPT 码）与收件人。留空则不发送邮件。",
+            "inputs": [
+                {
+                    "name": "发件邮箱",
+                    "label": "QQ 发件邮箱",
+                    "description": "例如 123456@qq.com",
+                    "pipeline_type": "string"
+                },
+                {
+                    "name": "MPT码",
+                    "label": "SMTP 授权码（MPT 码）",
+                    "description": "在 QQ 邮箱设置-账户-开启 SMTP 服务后生成的授权码，用于程序登录发件",
+                    "pipeline_type": "string"
+                },
+                {
+                    "name": "收件人",
+                    "label": "收件人邮箱",
+                    "description": "接收卡死通知的邮箱地址",
+                    "pipeline_type": "string"
+                }
+            ],
+            "pipeline_override": {
+                "卡死检测": {
+                    "custom_action_param": {
+                        "sender_email": "「发件邮箱」",
+                        "smtp_code": "「MPT码」",
+                        "recipient": "「收件人」"
+                    }
+                }
+            }
+        },
+        // 可选功能二：卡死时按预设分钟数后自动关机
+        "卡死关机配置": {
+            "type": "input",
+            "label": "卡死自动关机（可选）",
+            "description": "游戏卡死时，在指定分钟数后自动关机。填 0 或留空则不会自动关机。",
+            "inputs": [
+                {
+                    "name": "关机延迟分钟",
+                    "label": "自动关机延迟（分钟）",
+                    "description": "卡死后多少分钟自动关机，例如 5",
+                    "default": "0",
+                    "pipeline_type": "int"
+                },
+                {
+                    "name": "卡死判定秒数",
+                    "label": "卡死判定时长（秒）",
+                    "description": "连续识别失败多少秒判定为卡死，例如 60",
+                    "default": "60",
+                    "pipeline_type": "int"
+                }
+            ],
+            "pipeline_override": {
+                "卡死检测": {
+                    "custom_action_param": {
+                        "shutdown_minutes": "「关机延迟分钟」",
+                        "stuck_seconds": "「卡死判定秒数」"
+                    }
+                }
+            }
+        }
+    }
 }

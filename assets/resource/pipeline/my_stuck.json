@@ -1,0 +1,14 @@
+{
+    //卡死守护：当流水线持续识别失败并反复进入 on_error 时，累计失败时长，达到阈值判定卡死
+    //触发条件由 custom_action_param 控制，通常由 interface.json 的全局选项注入
+    "卡死检测": {
+        "action": "Custom",
+        "custom_action": "卡死检测",
+        "custom_action_param": {},
+        "pre_delay": 1000,
+        "timeout": 8000,
+        "next": [
+            "稀有事件"
+        ]
+    }
+}
