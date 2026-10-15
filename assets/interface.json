@@ -31,13 +31,13 @@
             ]
         }
     ],
-    // 可选的 agent 示例
-    // "agent": {
-    //     "child_exec": "python",
-    //     "child_args": [
-    //         "./agent/main.py"
-    //     ]
-    // },
+    // 挂机保护依赖 agent（Python 子进程）提供「进程监测」自定义动作，故此处必须启用
+    "agent": {
+        "child_exec": "python",
+        "child_args": [
+            "./agent/main.py"
+        ]
+    },
     "task": [
         {
             "name": "启动游戏",
@@ -71,27 +71,178 @@
         //     "entry": "MyTask4"
         // }
     ],
-    // "option": {
-    //     "任务选项1": {
-    //         "type": "select",
-    //         "cases": [
-    //             {
-    //                 "name": "文本1",
-    //                 "pipeline_override": {
-    //                     "OcrTask": {
-    //                         "text": "文本1"
-    //                     }
-    //                 }
-    //             },
-    //             {
-    //                 "name": "文本2",
-    //                 "pipeline_override": {
-    //                     "OcrTask": {
-    //                         "text": "文本2"
-    //                     }
-    //                 }
-    //             }
-    //         ]
-    //     }
-    // }
+    "global_option": [
+        // 挂机保护（进程没变化监测）：发邮件 / 自动关机
+        "挂机保护"
+    ],
+    "option": {
+        // 挂机保护总开关：开启后才会启用「进程监测节点」
+        "挂机保护": {
+            "type": "select",
+            "label": "挂机保护（进程没变化监测）",
+            "description": "监测游戏画面/进程是否长时间无变化（可能卡死）。开启后可在下方子项中选择：画面无变化达到设定时长后**发送一次邮件通知**和/或**自动关机**。",
+            "default_case": "关闭",
+            "cases": [
+                {
+                    "name": "关闭",
+                    "label": "关闭"
+                },
+                {
+                    "name": "开启",
+                    "label": "开启挂机保护",
+                    "option": [
+                        "空闲邮件通知",
+                        "空闲自动关机",
+                        "空闲判定时长",
+                        "SMTP邮箱设置"
+                    ],
+                    "pipeline_override": {
+                        "进程监测节点": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        // 可选项1：进程没变化 -> 发送一次邮件
+        "空闲邮件通知": {
+            "type": "switch",
+            "label": "进程没变化 → 发送邮件通知",
+            "description": "画面连续超过设定时长无变化时，向收件邮箱发送一次提醒邮件。",
+            "default_case": "No",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "是",
+                    "pipeline_override": {
+                        "进程监测节点": {
+                            "custom_action_param": {
+                                "email_enabled": "Yes"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "否",
+                    "pipeline_override": {
+                        "进程监测节点": {
+                            "custom_action_param": {
+                                "email_enabled": "No"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        // 可选项2：进程没变化 -> 自动关机
+        "空闲自动关机": {
+            "type": "switch",
+            "label": "进程没变化 → 自动关机",
+            "description": "画面连续超过设定时长无变化时，自动关闭电脑（30 秒后执行）。",
+            "default_case": "No",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "是",
+                    "pipeline_override": {
+                        "进程监测节点": {
+                            "custom_action_param": {
+                                "shutdown_enabled": "Yes"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "否",
+                    "pipeline_override": {
+                        "进程监测节点": {
+                            "custom_action_param": {
+                                "shutdown_enabled": "No"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        // 时间输入框：多少分钟没变化判定为卡死
+        "空闲判定时长": {
+            "type": "input",
+            "label": "空闲判定时长（分钟）",
+            "description": "游戏画面连续多少分钟没有变化，判定为「进程没变化」",
+            "inputs": [
+                {
+                    "name": "idle_minutes",
+                    "label": "分钟",
+                    "default": "10",
+                    "pipeline_type": "int",
+                    "verify": "^\\d+$",
+                    "pattern_msg": "请输入正整数（分钟）"
+                }
+            ],
+            "pipeline_override": {
+                "进程监测节点": {
+                    "custom_action_param": {
+                        "idle_minutes": "{idle_minutes}"
+                    }
+                }
+            }
+        },
+        // 邮箱设置：SMTP 服务器/端口/授权码/发件邮箱/收件邮箱
+        "SMTP邮箱设置": {
+            "type": "input",
+            "label": "SMTP 邮箱设置",
+            "description": "用于发送通知邮件。QQ 邮箱：服务器 smtp.qq.com，端口 465（SSL）或 587，需先在 QQ 邮箱「设置-账户」中开启 SMTP 服务并获取**授权码**（不是登录密码）。",
+            "inputs": [
+                {
+                    "name": "smtp_host",
+                    "label": "SMTP 服务器",
+                    "default": "smtp.qq.com",
+                    "pipeline_type": "string"
+                },
+                {
+                    "name": "smtp_port",
+                    "label": "SMTP 端口",
+                    "default": "465",
+                    "pipeline_type": "int",
+                    "verify": "^\\d+$",
+                    "pattern_msg": "请输入数字端口，如 465 或 587"
+                },
+                {
+                    "name": "smtp_user",
+                    "label": "发件邮箱（授权码所属账号）",
+                    "description": "开通了 SMTP、能获取到授权码的那个邮箱地址",
+                    "pipeline_type": "string",
+                    "verify": "^[\\w.+-]+@[\\w-]+\\.[\\w.]+$",
+                    "pattern_msg": "请输入正确的邮箱地址"
+                },
+                {
+                    "name": "smtp_code",
+                    "label": "SMTP 授权码",
+                    "description": "QQ 邮箱设置里生成的授权码",
+                    "pipeline_type": "string"
+                },
+                {
+                    "name": "recipient",
+                    "label": "收件邮箱",
+                    "description": "接收提醒邮件的邮箱（可填你的 QQ 邮箱）",
+                    "pipeline_type": "string",
+                    "verify": "^[\\w.+-]+@[\\w-]+\\.[\\w.]+$",
+                    "pattern_msg": "请输入正确的邮箱地址"
+                }
+            ],
+            "pipeline_override": {
+                "进程监测节点": {
+                    "custom_action_param": {
+                        "smtp_host": "{smtp_host}",
+                        "smtp_port": "{smtp_port}",
+                        "smtp_user": "{smtp_user}",
+                        "smtp_code": "{smtp_code}",
+                        "recipient": "{recipient}"
+                    }
+                }
+            }
+        }
+    }
 }

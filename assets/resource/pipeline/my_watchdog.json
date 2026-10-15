@@ -1,0 +1,26 @@
+{
+    "进程监测节点": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "进程监测",
+        "enabled": false,
+        "rate_limit": 5000,
+        "custom_action_param": {
+            "email_enabled": "No",
+            "shutdown_enabled": "No",
+            "idle_minutes": 10,
+            "diff_threshold": 1.5,
+            "smtp_host": "smtp.qq.com",
+            "smtp_port": 465,
+            "smtp_user": "",
+            "smtp_code": "",
+            "recipient": ""
+        },
+        "next": [
+            "各种事件"
+        ],
+        "on_error": [
+            "各种事件"
+        ]
+    }
+}
